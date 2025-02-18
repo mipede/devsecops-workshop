@@ -5,7 +5,7 @@ on:
  pull_request:
    branches: [ main ]
 jobs:
-sca:
+  sca:
    runs-on: ubuntu-latest
    steps:
      - name: Checkout Code
@@ -26,9 +26,9 @@ sca:
        with:
          name: dependency-check-report
          path: dependency-check-report.txt
-iac:
-   runs-on: ubuntu-latest
-   steps:
+  iac:
+    runs-on: ubuntu-latest
+    steps:
     - name: Checkout Code
       uses: actions/checkout@v2
     - name: Install Terraform
@@ -43,63 +43,60 @@ iac:
       run: |
         mkdir -p terraform  # Make sure the terraform directory exists
         cd terraform
-secrets:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
-    - name: Run Secrets Detection (GitLeaks)
-      run: |
-        curl -sSL -o gitleaks https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 && chmod +x gitleaks && mv gitleaks /usr/local/bin/
-        gitleaks detect --source . --report-path=gitleaks-report.json || true
-    - name: Upload GitLeaks Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: gitleaks-report
-        path: gitleaks-report.json
-     - name: Terraform Init
-       run: |
-         cd terraform
-        terraform init
-     - name: Terraform Validate
-       run: |
-         cd terraform
-        terraform validate
-
-     - name: Run IaC Security Scan
-       run: |
-         pip install checkov
-        checkov -d terraform --output cli --output-file-path iac-security-report.txt || true
-
-
-     - name: Upload IaC Security Report
-       uses: actions/upload-artifact@v4
-       with:
-         name: iac-security-report
-         path: iac-security-report.txt
-sast:
-   runs-on: ubuntu-latest
-   steps:
-     - name: Checkout Code
-       uses: actions/checkout@v2
-     - name: Set up Python
-       uses: actions/setup-python@v2
-       with:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Run Secrets Detection (GitLeaks)
+        run: |
+          curl -sSL -o gitleaks https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 && chmod +x gitleaks && mv gitleaks /usr/local/bin/
+          gitleaks detect --source . --report-path=gitleaks-report.json || true
+      - name: Upload GitLeaks Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+        - name: Terraform Init
+          run: |
+            cd terraform
+            terraform init
+        - name: Terraform Validate
+          run: |
+            cd terraform
+            terraform validate
+        - name: Run IaC Security Scan
+          run: |
+            pip install checkov
+            checkov -d terraform --output cli --output-file-path iac-security-report.txt || true
+        - name: Upload IaC Security Report
+          uses: actions/upload-artifact@v4
+            with:
+             name: iac-security-report
+             path: iac-security-report.txt
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
          python-version: '3.x'
-     - name: Install dependencies
-       run: |
-         pip install --upgrade pip && pip install -r requirements.txt
-     - name: Run Bandit Security Scan
-       run: |
-         bandit -r . -f html -o bandit-report.html || true
-     - name: Upload Bandit Report
-       uses: actions/upload-artifact@v4
-       with:
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip && pip install -r requirements.txt
+      - name: Run Bandit Security Scan
+        run: |
+          bandit -r . -f html -o bandit-report.html || true
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
          name: bandit-report
          path: bandit-report.html
-dast:
-   runs-on: ubuntu-latest
-   steps:
+  dast:
+    runs-on: ubuntu-latest
+    steps:
      - name: Checkout Code
        uses: actions/checkout@v2
      - name: Set up Python
@@ -112,8 +109,8 @@ dast:
      - name: Start Flask App
        run: |
          nohup python app.py > app.log 2>&1 &
-        sleep 10
-        curl --retry 5 --retry-connrefused --silent --fail http://localhost:8000 || (echo "Flask app failed to start" && exit 1)
+         sleep 10
+         curl --retry 5 --retry-connrefused --silent --fail http://localhost:8000 || (echo "Flask app failed to start" && exit 1)
      - name: Pull ZAP Docker Image (Fixes Permission Issues)
        run: |
          docker pull ghcr.io/zaproxy/zaproxy:stable
@@ -128,20 +125,20 @@ dast:
        with:
          name: owasp-zap-report
          path: owasp-zap-report.html
- gates:
-   runs-on: ubuntu-latest
-   needs: [sca, iac, secrets, sast, dast]
-   steps:
+  gates:
+    runs-on: ubuntu-latest
+    needs: [sca, iac, secrets, sast, dast]
+    steps:
      - name: Download SCA Report
        uses: actions/download-artifact@v4
        with:
          name: dependency-check-report
      - name: Check SCA Report
        run: |
-         if grep -q "HIGH" dependency-check-report.txt; then
+          if grep -q "HIGH" dependency-check-report.txt; then
           echo "High severity dependencies found! Failing the pipeline."
           exit 1
-        fi
+          fi
      - name: Download IAC Report
        uses: actions/download-artifact@v4
        with:
@@ -149,9 +146,9 @@ dast:
      - name: Check IaC Security Report
        run: |
          if grep -q "FAILED" iac-security-report.txt; then
-          echo "Infrastructure as Code security issues detected! Failing the pipeline."
-          exit 1
-        fi
+         echo "Infrastructure as Code security issues detected! Failing the pipeline."
+         exit 1
+         fi
      - name: Download Secrets Report
        uses: actions/download-artifact@v4
        with:
@@ -159,9 +156,9 @@ dast:
      - name: Check Secrets Report
        run: |
          if [ -s gitleaks-report.json ]; then
-          echo "Secrets detected in the codebase! Failing the pipeline."
-          exit 1
-        fi
+         echo "Secrets detected in the codebase! Failing the pipeline."
+         exit 1
+         fi
      - name: Download SAST Report
        uses: actions/download-artifact@v4
        with:
@@ -169,9 +166,9 @@ dast:
      - name: Check SAST Report
        run: |
          if grep -q "HIGH" bandit-report.html; then
-          echo "Critical vulnerabilities found in code! Failing the pipeline."
-          exit 1
-        fi
+         echo "Critical vulnerabilities found in code! Failing the pipeline."
+         exit 1
+         fi
      - name: Download DAST Report
        uses: actions/download-artifact@v4
        with:
@@ -179,10 +176,10 @@ dast:
      - name: Check DAST Report
        run: |
          if grep -q "WARN" owasp-zap-report.html; then
-          echo "DAST found warnings! Consider fixing."
-          exit 1
-        fi
-container-security:
+         echo "DAST found warnings! Consider fixing."
+         exit 1
+         fi
+  container-security:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -196,7 +193,7 @@ container-security:
           docker pull aquasec/trivy:latest
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy image flask-app:latest        
- license-compliance:
+  license-compliance:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -206,7 +203,7 @@ container-security:
         uses: fossa/fossa-cli-action@v2
         with:
           token: ${{ secrets.FOSSA_API_KEY }}
-policy-check:
+  policy-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -219,7 +216,7 @@ policy-check:
 
       - name: Run Conftest on Terraform Files
         run: conftest test terraform/*.tf
-code-quality:
+  code-quality:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -239,11 +236,10 @@ code-quality:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
- snyk-monitor:
+  snyk-monitor:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
       - name: Monitor Dependencies with Snyk
         run: snyk monitor --file=requirements.txt
-        
